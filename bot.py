@@ -1,6 +1,7 @@
 import asyncio
 import os
 import logging
+import random
 from datetime import timedelta
 
 import telethon
@@ -8,12 +9,12 @@ from telethon import TelegramClient, events, tl
 from telethon.tl.types import KeyboardButtonCallback
 from telethon.tl.functions.messages import GetScheduledHistoryRequest
 
-from common import GROUP_ID, CHANNEL
+from common import GROUP_ID, CHANNEL, timed_cache
 import button_dispatcher
 from button_dispatcher import do_nothing
 from message_data import parse_data, MessageData
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 client = TelegramClient('bot', 6, 'eb06d4abfb49dc3eeb1aeb98ae0f581e')
 client_user = TelegramClient('user', 6, 'eb06d4abfb49dc3eeb1aeb98ae0f581e')
 
@@ -22,6 +23,26 @@ def get_badge(text, count):
   if count:
     return f'{text} {count}'
   return text
+
+
+@timed_cache(60 * 60)
+async def get_username(id):
+  e = await client.get_entity(id)
+  return e.username
+
+
+async def format_username_list(user_ids):
+  usernames = []
+
+  for id in user_ids:
+    username = f'#{id}'
+    try:
+      username = '@' + await get_username(id)
+    except ValueError:
+      pass
+    usernames.append(f'<a href="tg://user?id={id}">{username}</a>')
+
+  return ', '.join(usernames)
 
 
 async def update_message(edit, data):
@@ -92,21 +113,23 @@ async def on_post(event, data):
     peer=await client_user.get_input_entity(CHANNEL),
     hash=0
   ))
-  schedule_time = timedelta(hours=12)
+  schedule_time = timedelta(hours=random.randint(12, 24))
   if scheduled_hist.messages:
     schedule_time = scheduled_hist.messages[0].date + schedule_time
 
   await client_user.send_message(
     CHANNEL,
     file=m.media,
-    schedule=timedelta(hours=12)
+    schedule=schedule_time
   )
-  #TODO: format better
-  await event.edit(text=(
-    f'👍: {list(data.likes)}\n'
-    f'👎: {list(data.dislikes)}\n'
-    '#posted'
-  ))
+  await event.edit(
+    text=(
+      f'👍: {await format_username_list(data.likes)}\n'
+      f'👎: {await format_username_list(data.dislikes)}\n'
+      '#posted'
+    ),
+    parse_mode='HTML'
+  )
 
 
 @client.on(events.NewMessage(chats=GROUP_ID))
