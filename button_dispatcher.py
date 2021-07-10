@@ -30,7 +30,7 @@ async def do_nothing(event):
 
 def get_button(text, func, extra_data=b''):
   callback_id = getattr(func, CALLBACK_ID_ATTR, None)
-  if not callback_id:
+  if callback_id is None:
     raise ValueError('Function is not a registered button callback!')
   data = struct.pack(CALLBACK_DATA_FMT, callback_id) + extra_data
   return KeyboardButtonCallback(text, data)

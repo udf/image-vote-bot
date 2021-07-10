@@ -16,6 +16,7 @@ from button_dispatcher import do_nothing
 
 logging.basicConfig(level=logging.INFO)
 client = TelegramClient('bot', 6, 'eb06d4abfb49dc3eeb1aeb98ae0f581e')
+client_user = TelegramClient('user', 6, 'eb06d4abfb49dc3eeb1aeb98ae0f581e')
 
 
 def get_badge(text, count):
@@ -92,12 +93,14 @@ async def on_delete(event, *, pending_confirms=set()):
 
 @button_dispatcher.register(4)
 async def on_post(event):
-  m = await event.get_message()
-  await client.send_message(
+  m = await client_user.get_messages(GROUP_ID, ids=event.message_id)
+
+  await client_user.send_message(
     CHANNEL,
-    file=m.media, schedule=timedelta(hours=12)
+    file=m.media,
+    schedule=timedelta(hours=12)
   )
-  await m.edit(message='', buttons=[[
+  await event.edit(text='', buttons=[[
     do_nothing.get_button('Scheduled')
   ]])
 
@@ -116,6 +119,7 @@ async def on_image(event):
 
 async def main():
   await client.start(bot_token=os.environ['TOKEN'])
+  await client_user.start()
   client.add_event_handler(button_dispatcher.dispatch)
   await client.run_until_disconnected()
 
