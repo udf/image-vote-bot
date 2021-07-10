@@ -1,2 +1,2 @@
-GROUP_ID = 1286178907
-CHANNEL = '@ydtgjgjdfgh'
+GROUP_ID = 1146155787
+CHANNEL = '@JapaneseSpirit'

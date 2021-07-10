@@ -6,6 +6,7 @@ from datetime import timedelta
 import telethon
 from telethon import TelegramClient, events, tl
 from telethon.tl.types import KeyboardButtonCallback
+from telethon.tl.functions.messages import GetScheduledHistoryRequest
 
 from common import GROUP_ID, CHANNEL
 import button_dispatcher
@@ -86,6 +87,14 @@ async def on_delete(event, data, *, pending_confirms=set()):
 @parse_data(get_callback_message)
 async def on_post(event, data):
   m = await client_user.get_messages(GROUP_ID, ids=event.message_id)
+
+  scheduled_hist = await client_user(GetScheduledHistoryRequest(
+    peer=await client_user.get_input_entity(CHANNEL),
+    hash=0
+  ))
+  schedule_time = timedelta(hours=12)
+  if scheduled_hist.messages:
+    schedule_time = scheduled_hist.messages[0].date + schedule_time
 
   await client_user.send_message(
     CHANNEL,
