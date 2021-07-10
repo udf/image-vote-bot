@@ -14,7 +14,7 @@ import button_dispatcher
 from button_dispatcher import do_nothing
 from message_data import parse_data, MessageData
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 client = TelegramClient('bot', 6, 'eb06d4abfb49dc3eeb1aeb98ae0f581e')
 client_user = TelegramClient('user', 6, 'eb06d4abfb49dc3eeb1aeb98ae0f581e')
 
