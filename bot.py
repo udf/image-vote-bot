@@ -107,12 +107,13 @@ async def on_image(event):
     return
   data = MessageData()
   data.owner = event.message.sender_id
+  data.likes.add(event.message.sender_id)
   await event.respond(
     message=data.encode(),
     parse_mode=None,
     file=m.media,
     buttons=[[
-      on_upvote.get_button('👍'),
+      on_upvote.get_button('👍 1'),
       on_downvote.get_button('👎'),
       on_delete.get_button('🗑')
     ]]
