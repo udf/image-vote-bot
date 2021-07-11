@@ -6,9 +6,8 @@ import cbor2
 
 
 class MessageData:
-  prop_names = ['owner', 'likes', 'dislikes']
+  prop_names = ['likes', 'dislikes']
   prop_defaults = {
-    'owner': lambda: 0,
     'likes': lambda: set(),
     'dislikes': lambda: set(),
   }

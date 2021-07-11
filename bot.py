@@ -87,21 +87,27 @@ async def on_downvote(event, data):
 
 @button_dispatcher.register(3)
 @parse_data(get_callback_message)
-async def on_delete(event, data, *, pending_confirms=set()):
-  if data.owner != event.query.user_id:
+async def on_delete(event, data):
+  owner = event.extra_data
+  if owner != event.query.user_id:
     await event.answer(message='Only the owner of the original message can delete!')
     return
-  confirm_id = (event.message_id, event.chat_instance)
-  if confirm_id not in pending_confirms:
-    await event.answer(message='Are you sure? Tap delete again to confirm')
-    pending_confirms.add(confirm_id)
-    await asyncio.sleep(10)
-    pending_confirms.discard(confirm_id)
-    return
 
-  pending_confirms.discard(confirm_id)
   await event.answer(message='Message deleted')
   await event.delete()
+
+
+@button_dispatcher.register(5)
+async def on_vote_start(event):
+  owner, message_id = event.extra_data
+  if owner != event.query.user_id:
+    await event.answer(message='Only the owner of the original message can start voting!')
+    return
+
+  data = MessageData()
+  data.likes.add(owner)
+  await update_message(event.edit, data)
+  await client.delete_messages(GROUP_ID, [message_id])
 
 
 @button_dispatcher.register(4)
@@ -137,17 +143,11 @@ async def on_image(event):
   m = event.message
   if not isinstance(m.media, tl.types.MessageMediaPhoto):
     return
-  data = MessageData()
-  data.owner = event.message.sender_id
-  data.likes.add(event.message.sender_id)
   await event.respond(
-    message=data.encode(),
-    parse_mode=None,
     file=m.media,
     buttons=[[
-      on_upvote.get_button('👍 1'),
-      on_downvote.get_button('👎'),
-      on_delete.get_button('🗑')
+      on_vote_start.get_button('👍', [event.message.sender_id, m.id]),
+      on_delete.get_button('🗑', event.message.sender_id)
     ]]
   )
 
