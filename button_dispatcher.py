@@ -1,6 +1,7 @@
 import struct
 import logging
 
+import cbor2
 from telethon import events
 from telethon.tl.types import KeyboardButtonCallback
 
@@ -17,7 +18,7 @@ def register(callback_id):
     raise ValueError(f'Duplicate callback ID: {callback_id}')
   def wrapper(func):
     setattr(func, CALLBACK_ID_ATTR, callback_id)
-    func.get_button = lambda text: get_button(text, func)
+    func.get_button = lambda text, extra_data=None: get_button(text, func, extra_data)
     CALLBACKS[callback_id] = func
     return func
   return wrapper
@@ -28,20 +29,22 @@ async def do_nothing(event):
   pass
 
 
-def get_button(text, func):
+def get_button(text, func, extra_data=None):
   callback_id = getattr(func, CALLBACK_ID_ATTR, None)
   if callback_id is None:
     raise ValueError('Function is not a registered button callback!')
   data = struct.pack(CALLBACK_DATA_FMT, callback_id)
+  data += cbor2.dumps(extra_data)
   return KeyboardButtonCallback(text, data)
 
 
 @events.register(events.CallbackQuery(chats=GROUP_ID))
 async def dispatch(event):
-  callback_id, = struct.unpack(CALLBACK_DATA_FMT, event.data)
+  callback_id, = struct.unpack_from(CALLBACK_DATA_FMT, event.data)
   callback = CALLBACKS.get(callback_id, None)
   if not callback:
     logger.warning(f'Not handling unknown callback with data {event.data}')
     return
+  event.extra_data = cbor2.loads(event.data[1:])
   await callback(event)
   await event.answer()
