@@ -17,6 +17,8 @@ class MessageData:
     if text:
       data = cbor2.loads(b85decode(text.encode('ascii')))
     for key, value in zip_longest(MessageData.prop_names, data):
+      if key is None:
+        break
       if value is None:
         value = MessageData.prop_defaults[key]()
       setattr(self, key, value)
