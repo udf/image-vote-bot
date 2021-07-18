@@ -5,7 +5,7 @@ import random
 from datetime import timedelta
 
 import telethon
-from telethon import TelegramClient, events, tl
+from telethon import TelegramClient, events, tl, utils
 from telethon.tl.types import KeyboardButtonCallback
 from telethon.tl.functions.messages import GetScheduledHistoryRequest
 
@@ -33,6 +33,9 @@ async def get_username(id):
 
 async def format_username_list(user_ids):
   usernames = []
+
+  if not utils.is_list_like(user_ids):
+    user_ids = (user_ids,)
 
   for id in user_ids:
     username = f'#{id}'
@@ -99,13 +102,15 @@ async def on_delete(event, data):
 
 @button_dispatcher.register(5)
 async def on_vote_start(event):
-  owner, message_id = event.extra_data
+  owner, message_id, submitter = event.extra_data
   if owner != event.query.user_id:
     await event.answer(message='Only the owner of the original message can start voting!')
     return
 
   data = MessageData()
   data.likes.add(owner)
+  data.owner = owner
+  data.submitter = submitter
   await update_message(event.edit, data)
   await client.delete_messages(GROUP_ID, [message_id])
 
@@ -128,11 +133,16 @@ async def on_post(event, data):
     file=m.media,
     schedule=schedule_time
   )
+  submitter = data.submitter or data.owner
+  submitted_via = ''
+  if data.submitter:
+    submitted_via = f' via {await format_username_list(data.owner)}'
   await event.edit(
     text=(
+      f'Submitted by {await format_username_list(submitter)}{submitted_via}\n'
       f'👍: {await format_username_list(data.likes)}\n'
       f'👎: {await format_username_list(data.dislikes)}\n'
-      '#posted'
+      f'#posted by {await format_username_list(event.query.user_id)}'
     ),
     parse_mode='HTML'
   )
@@ -143,10 +153,15 @@ async def on_image(event):
   m = event.message
   if not isinstance(m.media, tl.types.MessageMediaPhoto):
     return
+  submitter = None
+  if m.forward:
+    submitter = m.forward.sender_id
+  if submitter == event.message.sender_id:
+    submitter = None
   await event.respond(
     file=m.media,
     buttons=[[
-      on_vote_start.get_button('👍', [event.message.sender_id, m.id]),
+      on_vote_start.get_button('👍', [event.message.sender_id, m.id, submitter]),
       on_delete.get_button('🗑', event.message.sender_id)
     ]]
   )
