@@ -124,7 +124,7 @@ async def on_post(event, data):
     peer=await client_user.get_input_entity(CHANNEL),
     hash=0
   ))
-  schedule_time = timedelta(hours=random.randint(12, 24))
+  schedule_time = timedelta(minutes=random.randint(12*60, 24*60))
   if scheduled_hist.messages:
     schedule_time = scheduled_hist.messages[0].date + schedule_time
 
