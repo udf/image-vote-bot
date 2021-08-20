@@ -50,8 +50,13 @@ async def format_username_list(user_ids):
 
 async def update_message(edit, data):
   second_row = []
-  if len(data.likes) >= 2:
-    second_row = [on_post.get_button('Post')]
+  num_likes = len(data.likes)
+  num_dislikes = len(data.dislikes)
+  total_votes = (num_likes + num_dislikes) or 1
+  if num_likes / total_votes >= 0.4:
+    second_row.append(on_post.get_button('Post'))
+  if num_dislikes / total_votes >= 0.4:
+    second_row.append(on_reject.get_button('Reject'))
   await edit(
     data.encode(),
     parse_mode=None,
@@ -62,6 +67,22 @@ async def update_message(edit, data):
       ],
       second_row
     ]
+  )
+
+
+async def archive_message(event, data, reason):
+  submitter = data.submitter or data.owner
+  submitted_via = ''
+  if data.submitter:
+    submitted_via = f' via {await format_username_list(data.owner)}'
+  await event.edit(
+    text=(
+      f'Submitted by {await format_username_list(submitter)}{submitted_via}\n'
+      f'👍: {await format_username_list(data.likes)}\n'
+      f'👎: {await format_username_list(data.dislikes)}\n'
+      f'#{reason} by {await format_username_list(event.query.user_id)}'
+    ),
+    parse_mode='HTML'
   )
 
 
@@ -133,19 +154,14 @@ async def on_post(event, data):
     file=m.media,
     schedule=schedule_time
   )
-  submitter = data.submitter or data.owner
-  submitted_via = ''
-  if data.submitter:
-    submitted_via = f' via {await format_username_list(data.owner)}'
-  await event.edit(
-    text=(
-      f'Submitted by {await format_username_list(submitter)}{submitted_via}\n'
-      f'👍: {await format_username_list(data.likes)}\n'
-      f'👎: {await format_username_list(data.dislikes)}\n'
-      f'#posted by {await format_username_list(event.query.user_id)}'
-    ),
-    parse_mode='HTML'
-  )
+
+  await archive_message(event, data, 'posted')
+
+
+@button_dispatcher.register(6)
+@parse_data(get_callback_message)
+async def on_reject(event, data):
+  await archive_message(event, data, 'rejected')
 
 
 @client.on(events.NewMessage(chats=GROUP_ID))
