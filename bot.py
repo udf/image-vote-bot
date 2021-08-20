@@ -53,7 +53,7 @@ async def update_message(edit, data):
   num_likes = len(data.likes)
   num_dislikes = len(data.dislikes)
   total_votes = (num_likes + num_dislikes) or 1
-  if num_likes / total_votes >= 0.4:
+  if num_likes >= 2 and num_likes / total_votes >= 0.4:
     second_row.append(on_post.get_button('Post'))
   if num_dislikes / total_votes >= 0.4:
     second_row.append(on_reject.get_button('Reject'))
